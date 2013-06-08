@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		904F217A1761F5BE00B8CAAF /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 904F21791761F5BE00B8CAAF /* QuartzCore.framework */; };
 		90AAD7FC1761815100E6FA8E /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90AAD7FB1761815100E6FA8E /* UIKit.framework */; };
 		90AAD7FE1761815100E6FA8E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90AAD7FD1761815100E6FA8E /* Foundation.framework */; };
 		90AAD8001761815100E6FA8E /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 90AAD7FF1761815100E6FA8E /* CoreGraphics.framework */; };
@@ -19,9 +20,12 @@
 		90AAD8151761815100E6FA8E /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD8141761815100E6FA8E /* ViewController.m */; };
 		90AAD8181761815100E6FA8E /* ViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 90AAD8161761815100E6FA8E /* ViewController.xib */; };
 		90AAD8211761833700E6FA8E /* HorizontalTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD8201761833700E6FA8E /* HorizontalTableView.m */; };
+		90AAD82417618D2800E6FA8E /* WKMutableStack.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD82317618D2800E6FA8E /* WKMutableStack.m */; };
+		90AAD82717618D4800E6FA8E /* HTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD82617618D4800E6FA8E /* HTableViewCell.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		904F21791761F5BE00B8CAAF /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		90AAD7F81761815100E6FA8E /* HorizontalTableView.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HorizontalTableView.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		90AAD7FB1761815100E6FA8E /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		90AAD7FD1761815100E6FA8E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -40,6 +44,10 @@
 		90AAD8171761815100E6FA8E /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ViewController.xib; sourceTree = "<group>"; };
 		90AAD81F1761833700E6FA8E /* HorizontalTableView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HorizontalTableView.h; sourceTree = "<group>"; };
 		90AAD8201761833700E6FA8E /* HorizontalTableView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HorizontalTableView.m; sourceTree = "<group>"; };
+		90AAD82217618D2800E6FA8E /* WKMutableStack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKMutableStack.h; sourceTree = "<group>"; };
+		90AAD82317618D2800E6FA8E /* WKMutableStack.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WKMutableStack.m; sourceTree = "<group>"; };
+		90AAD82517618D4800E6FA8E /* HTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTableViewCell.h; sourceTree = "<group>"; };
+		90AAD82617618D4800E6FA8E /* HTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HTableViewCell.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				904F217A1761F5BE00B8CAAF /* QuartzCore.framework in Frameworks */,
 				90AAD7FC1761815100E6FA8E /* UIKit.framework in Frameworks */,
 				90AAD7FE1761815100E6FA8E /* Foundation.framework in Frameworks */,
 				90AAD8001761815100E6FA8E /* CoreGraphics.framework in Frameworks */,
@@ -77,6 +86,7 @@
 		90AAD7FA1761815100E6FA8E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				904F21791761F5BE00B8CAAF /* QuartzCore.framework */,
 				90AAD7FB1761815100E6FA8E /* UIKit.framework */,
 				90AAD7FD1761815100E6FA8E /* Foundation.framework */,
 				90AAD7FF1761815100E6FA8E /* CoreGraphics.framework */,
@@ -116,6 +126,10 @@
 			children = (
 				90AAD81F1761833700E6FA8E /* HorizontalTableView.h */,
 				90AAD8201761833700E6FA8E /* HorizontalTableView.m */,
+				90AAD82517618D4800E6FA8E /* HTableViewCell.h */,
+				90AAD82617618D4800E6FA8E /* HTableViewCell.m */,
+				90AAD82217618D2800E6FA8E /* WKMutableStack.h */,
+				90AAD82317618D2800E6FA8E /* WKMutableStack.m */,
 			);
 			path = HorizontalTableViewKit;
 			sourceTree = "<group>";
@@ -190,6 +204,8 @@
 				90AAD80C1761815100E6FA8E /* AppDelegate.m in Sources */,
 				90AAD8151761815100E6FA8E /* ViewController.m in Sources */,
 				90AAD8211761833700E6FA8E /* HorizontalTableView.m in Sources */,
+				90AAD82417618D2800E6FA8E /* WKMutableStack.m in Sources */,
+				90AAD82717618D4800E6FA8E /* HTableViewCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,6 +328,7 @@
 				90AAD81D1761815100E6FA8E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

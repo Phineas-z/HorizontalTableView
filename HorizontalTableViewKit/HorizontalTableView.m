@@ -7,12 +7,51 @@
 //
 
 #import "HorizontalTableView.h"
+#import "WKMutableStack.h"
+
+#define DEFAULT_CELL_WIDTH 50
+#define CELL_PRELOAD_BUFFER 0
+
+typedef struct {
+    NSInteger firstIndex;
+    NSInteger lastIndex;
+} CellIndexRange;
+
+@interface HorizontalTableView()<UIScrollViewDelegate>{
+    CGFloat* _cellRightBoundArray;
+}
+
+@property (nonatomic) CellIndexRange visibleCellRange;
+@property (nonatomic) NSInteger numberOfCell;
+
+//
+@property (nonatomic, retain) NSMutableArray* visibleCells;
+@property (nonatomic, retain) NSMutableDictionary* cellRecyclePool;
+
+//
+@property (nonatomic) BOOL isLoaded;
+
+@end
 
 @implementation HorizontalTableView
 
 -(void)dealloc{
-    //Remove KVO
-    [self removeObserver:self forKeyPath:@"contentOffset"];
+    //Remove KVO safely
+    @try {
+        [self removeObserver:self forKeyPath:@"contentOffset"];
+    }
+    @catch (NSException *exception) {
+        NSLog(@"HorizontalTableView not reload!\n %@", exception);
+    }
+    
+    //
+    self.dataSource = nil;
+    self.delegate = nil;
+    //
+    self.visibleCells = nil;
+    self.cellRecyclePool = nil;
+    //
+    free(_cellRightBoundArray);
     
     [super dealloc];
 }
@@ -21,18 +60,284 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        // Initialization code
+        //initialize
+        self.visibleCells = [NSMutableArray array];
+        self.cellRecyclePool = [NSMutableDictionary dictionary];
         
         //KVO for contentOffset
-        [self addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionNew context:NULL];
+        [self addObserver:self forKeyPath:@"contentOffset" options:NSKeyValueObservingOptionOld context:NULL];
     }
     return self;
 }
 
-#pragma mark - Listen KVO
+#pragma mark - Public methods
+-(void)reloadData{    
+    //Clear
+    [self clearAllCells];
+    
+    //Build intial cell map
+    //Find first cell to add to scrollView
+    self.numberOfCell = [self.dataSource hTableView:self numberOfColumnInSection:0];
+    
+    //Build cell map by recording the right bound of each cell
+    _cellRightBoundArray = malloc( sizeof(CGFloat) * self.numberOfCell );
+    for (int i=0; i<self.numberOfCell; i++){
+        //Get cell width at index i
+        CGFloat cellWidth = DEFAULT_CELL_WIDTH;
+        if ([self.delegate respondsToSelector:@selector(hTableView:widthForColumnAtIndexPath:)]) {
+            cellWidth = [self.delegate hTableView:self widthForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+        }
+        
+        //Record right bound of each cell
+        if (i>=1) {
+            _cellRightBoundArray[i] = _cellRightBoundArray[i-1] + cellWidth;
+        }else{
+            _cellRightBoundArray[i] = cellWidth;
+        }
+    }
+    
+    //Set contentSize
+    CGSize contentSize = CGSizeMake(0, CGRectGetHeight(self.bounds));
+    contentSize.width = _cellRightBoundArray[self.numberOfCell-1]>CGRectGetWidth(self.bounds) ? _cellRightBoundArray[self.numberOfCell-1] : CGRectGetWidth(self.bounds)+1;
+    self.contentSize = contentSize;
+    
+    [self initVisibleCells];
+    
+    self.isLoaded = YES;
+}
+
+-(id)dequeueReusableCellWithIdentifier:(NSString *)identifier{
+    if (self.cellRecyclePool[identifier] && [self.cellRecyclePool[identifier] isKindOfClass:[WKMutableStack class]]) {
+        return [(WKMutableStack*)self.cellRecyclePool[identifier] pop];
+    }
+    
+    return nil;
+}
+
+#pragma mark - Recyle and reuse cell in scroll
+-(void)initVisibleCells{
+    //构造一个change
+    NSDictionary* change = @{@"old": [NSValue valueWithCGPoint:CGPointMake(0., 0.)]};
+    
+    //Find first and last visible cell after set contentSize because contentOffset may change after set contentSize
+    CellIndexRange visibleRange = [self visibleCellRangeWithOffsetChange:change];
+    
+    //Add cells in visible range
+    for (int i=visibleRange.firstIndex; i<=visibleRange.lastIndex; i++) {
+        HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+        
+        cell.frame = [self frameForCellAtIndex:i];
+        
+        [self.visibleCells addObject:cell];
+        
+        [self addSubview:cell];
+    }
+    
+    self.visibleCellRange = visibleRange;
+}
+
+-(void)layoutCellsWithContentOffsetChange:(NSDictionary*)change{
+    CellIndexRange newVisibleRange = [self visibleCellRangeWithOffsetChange:change];
+    NSLog(@"%d %d", newVisibleRange.firstIndex, newVisibleRange.lastIndex);
+    
+    //Heads up! ：在回收和添加cell的时候要注意一个极端情况，当翻动特别快的时候，可能会出现
+    //1、向后滑动，老的lastIndex比新的firstIndex还小
+    //2、向前滑动，老的firstIndex笔新的lastIndex
+    //在这种情况下很可能会数组越界，因此在循环index的时候一定要处理范围越界，下面正是这么处理的
+    
+    //Do recycle first
+    //Recyle invisible cell on left
+    if (self.visibleCellRange.firstIndex < newVisibleRange.firstIndex) {
+        CellIndexRange recycleRange;
+        recycleRange.firstIndex = self.visibleCellRange.firstIndex;
+        recycleRange.lastIndex = MIN(newVisibleRange.firstIndex-1, self.visibleCellRange.lastIndex);
+        
+        for (int i=recycleRange.firstIndex; i<=recycleRange.lastIndex; i++){
+            HTableViewCell* cellToRecycle = self.visibleCells[0];
+            
+            [self recycleCell:cellToRecycle];
+
+            [self.visibleCells removeObject:cellToRecycle];
+                        
+            [cellToRecycle removeFromSuperview];
+        }
+    }
+    
+    //Recycle visible cell on right
+    if (self.visibleCellRange.lastIndex > newVisibleRange.lastIndex) {
+        CellIndexRange recycleRange;
+        recycleRange.firstIndex = MAX(newVisibleRange.lastIndex+1, self.visibleCellRange.firstIndex);
+        recycleRange.lastIndex = self.visibleCellRange.lastIndex;
+        
+        for (int i=recycleRange.firstIndex; i<=recycleRange.lastIndex; i++) {
+            HTableViewCell* cell = self.visibleCells.lastObject;
+            
+            [self recycleCell:cell];
+            
+            [self.visibleCells removeObject:cell];
+            
+            [cell removeFromSuperview];
+        }
+    }
+    
+    //Do add after recycle
+    //Add visible cell on left
+    if (self.visibleCellRange.firstIndex > newVisibleRange.firstIndex) {
+        CellIndexRange addRange;
+        addRange.firstIndex = newVisibleRange.firstIndex;
+        addRange.lastIndex = MIN(self.visibleCellRange.firstIndex-1, newVisibleRange.lastIndex);
+        
+        for (int i=addRange.lastIndex; i>=addRange.firstIndex; i--) {
+            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+                        
+            cell.frame = [self frameForCellAtIndex:i];
+            
+            [self.visibleCells insertObject:cell atIndex:0];
+            
+            [self addSubview:cell];
+        }
+    }
+    
+    //Add visible cell on right
+    if (self.visibleCellRange.lastIndex < newVisibleRange.lastIndex) {
+        CellIndexRange addRange;
+        addRange.firstIndex = MAX(self.visibleCellRange.lastIndex+1, newVisibleRange.firstIndex);
+        addRange.lastIndex = newVisibleRange.lastIndex;
+        
+        for (int i=addRange.firstIndex; i<=addRange.lastIndex; i++) {
+            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+
+            cell.frame = [self frameForCellAtIndex:i];
+            
+            [self.visibleCells addObject:cell];
+            
+            [self addSubview:cell];
+        }
+    }
+    
+    self.visibleCellRange = newVisibleRange;
+}
+
+-(void)clearAllCells{
+    for (HTableViewCell* cell in self.visibleCells){
+        [cell removeFromSuperview];
+    }
+    
+    [self.visibleCells removeAllObjects];
+    [self.cellRecyclePool removeAllObjects];
+    free(_cellRightBoundArray);
+    _cellRightBoundArray = NULL;
+    
+    CellIndexRange cellRange;
+    cellRange.firstIndex = 0;
+    cellRange.lastIndex = 0;
+    self.visibleCellRange = cellRange;
+}
+
+-(void)recycleCell:(HTableViewCell*)cell{
+    if (!self.cellRecyclePool[cell.reuseIdentifier] || ![self.cellRecyclePool[cell.reuseIdentifier] isKindOfClass:[WKMutableStack class]]) {
+        [self.cellRecyclePool setObject:[WKMutableStack stack] forKey:cell.reuseIdentifier];
+    }
+    
+    [(WKMutableStack*)self.cellRecyclePool[cell.reuseIdentifier] push:cell];
+}
+
+#pragma mark - Utils
+//Calculate current visible cell range according to the offset change
+-(CellIndexRange)visibleCellRangeWithOffsetChange:(NSDictionary*)change{
+    CGFloat newXOffset = self.contentOffset.x;
+    CGFloat oldXOffset = [change[@"old"] CGPointValue].x;
+    
+    //可见区域判断规则：
+    //起点：首先判断哪个cell使得左可见边界>=cell左界，<cell右界，然后以cell中线为分割，中线以左为上一个cell，中线以右为本cell
+    //止点：首先判断哪个cell使得右可见边界>cell左界，<=cell右界，然后以cell中线为分割，中线以右为下一个cell，中线以左为本cell
+    NSInteger firstVisibleCellIndex = self.visibleCellRange.firstIndex;
+    NSInteger lastVisibleCellIndex = self.visibleCellRange.lastIndex;
+    
+    if (newXOffset >= oldXOffset) {
+        //向后查找
+        while ( firstVisibleCellIndex < self.numberOfCell
+               &&  _cellRightBoundArray[firstVisibleCellIndex] < newXOffset ) {
+            
+            firstVisibleCellIndex++;
+            
+        }
+        
+        //向后查找
+        while ( lastVisibleCellIndex < self.numberOfCell
+               &&  _cellRightBoundArray[lastVisibleCellIndex] < newXOffset + CGRectGetWidth(self.bounds) ) {
+            
+            lastVisibleCellIndex++;
+            
+        }
+        
+    }else if (newXOffset < oldXOffset){
+        //向前查找
+        while ( firstVisibleCellIndex >= 0
+               && [self leftBoundOffsetOfCellAtIndex:firstVisibleCellIndex] > newXOffset ) {
+            
+            firstVisibleCellIndex--;
+            
+        }
+        
+        //向前查找
+        while ( lastVisibleCellIndex >= 0
+               && [self leftBoundOffsetOfCellAtIndex:lastVisibleCellIndex] > newXOffset + CGRectGetWidth(self.bounds) ) {
+            
+            lastVisibleCellIndex--;
+            
+        }
+        
+    }
+    
+    //判断和中线的位置
+    if (newXOffset < [self xCenterOfCellAtIndex:firstVisibleCellIndex])
+    {
+        firstVisibleCellIndex--;
+    }
+    //判断和中线的位置
+    if (newXOffset + CGRectGetWidth(self.bounds) > [self xCenterOfCellAtIndex:lastVisibleCellIndex])
+    {
+        lastVisibleCellIndex++;
+    }
+    
+    CellIndexRange visibleCellRange;
+    visibleCellRange.firstIndex = MAX(0, firstVisibleCellIndex - CELL_PRELOAD_BUFFER);
+    visibleCellRange.lastIndex = MIN(self.numberOfCell - 1, lastVisibleCellIndex + CELL_PRELOAD_BUFFER);
+    
+    return visibleCellRange;
+}
+
+//Frame for cell with indexPath
+-(CGRect)frameForCellAtIndex:(NSInteger)index{
+    return CGRectMake([self leftBoundOffsetOfCellAtIndex:index], 0, [self widthOfCellAtIndex:index], CGRectGetHeight(self.bounds));
+}
+
+//Get cell's left bound
+-(CGFloat)leftBoundOffsetOfCellAtIndex:(NSInteger)index{
+    if (index == 0) {
+        return 0.;
+    }else if (index > 0){
+        return _cellRightBoundArray[index-1];
+    }else{
+        return -1.;//Error
+    }
+}
+
+//Get cell's width
+-(CGFloat)widthOfCellAtIndex:(NSInteger)index{
+    return _cellRightBoundArray[index] - [self leftBoundOffsetOfCellAtIndex:index];
+}
+
+//Get cell's center position x value
+-(CGFloat)xCenterOfCellAtIndex:(NSInteger)index{
+    return _cellRightBoundArray[index] - [self widthOfCellAtIndex:index]/2;
+}
+
+#pragma mark - Listen KVO scrollEvent
 -(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
-    if ([keyPath isEqualToString:@"contentOffset"] && [object valueForKeyPath:keyPath] != [NSNull null]) {
-        NSLog(@"%f", [[object valueForKeyPath:keyPath] floatValue]);
+    if (self.isLoaded && [keyPath isEqualToString:@"contentOffset"]) {
+        [self layoutCellsWithContentOffsetChange:change];
     }
 }
 
