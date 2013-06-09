@@ -22,6 +22,7 @@
 		90AAD8211761833700E6FA8E /* HorizontalTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD8201761833700E6FA8E /* HorizontalTableView.m */; };
 		90AAD82417618D2800E6FA8E /* WKMutableStack.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD82317618D2800E6FA8E /* WKMutableStack.m */; };
 		90AAD82717618D4800E6FA8E /* HTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 90AAD82617618D4800E6FA8E /* HTableViewCell.m */; };
+		90F3C47B17637872003142A1 /* LabelCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 90F3C47A17637872003142A1 /* LabelCell.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,8 @@
 		90AAD82317618D2800E6FA8E /* WKMutableStack.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WKMutableStack.m; sourceTree = "<group>"; };
 		90AAD82517618D4800E6FA8E /* HTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTableViewCell.h; sourceTree = "<group>"; };
 		90AAD82617618D4800E6FA8E /* HTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HTableViewCell.m; sourceTree = "<group>"; };
+		90F3C47917637872003142A1 /* LabelCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LabelCell.h; sourceTree = "<group>"; };
+		90F3C47A17637872003142A1 /* LabelCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LabelCell.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +104,8 @@
 				90AAD80B1761815100E6FA8E /* AppDelegate.m */,
 				90AAD8131761815100E6FA8E /* ViewController.h */,
 				90AAD8141761815100E6FA8E /* ViewController.m */,
+				90F3C47917637872003142A1 /* LabelCell.h */,
+				90F3C47A17637872003142A1 /* LabelCell.m */,
 				90AAD8021761815100E6FA8E /* Supporting Files */,
 			);
 			path = HorizontalTableView;
@@ -206,6 +211,7 @@
 				90AAD8211761833700E6FA8E /* HorizontalTableView.m in Sources */,
 				90AAD82417618D2800E6FA8E /* WKMutableStack.m in Sources */,
 				90AAD82717618D4800E6FA8E /* HTableViewCell.m in Sources */,
+				90F3C47B17637872003142A1 /* LabelCell.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

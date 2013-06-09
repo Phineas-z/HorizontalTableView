@@ -25,7 +25,7 @@ typedef struct {
 @property (nonatomic) NSInteger numberOfCell;
 
 //
-@property (nonatomic, retain) NSMutableArray* visibleCells;
+@property (nonatomic, retain) NSMutableArray* visibleCellArray;
 @property (nonatomic, retain) NSMutableDictionary* cellRecyclePool;
 
 //
@@ -48,7 +48,7 @@ typedef struct {
     self.dataSource = nil;
     self.delegate = nil;
     //
-    self.visibleCells = nil;
+    self.visibleCellArray = nil;
     self.cellRecyclePool = nil;
     //
     free(_cellRightBoundArray);
@@ -61,7 +61,7 @@ typedef struct {
     self = [super initWithFrame:frame];
     if (self) {
         //initialize
-        self.visibleCells = [NSMutableArray array];
+        self.visibleCellArray = [NSMutableArray array];
         self.cellRecyclePool = [NSMutableDictionary dictionary];
         
         //KVO for contentOffset
@@ -76,16 +76,15 @@ typedef struct {
     [self clearAllCells];
     
     //Build intial cell map
-    //Find first cell to add to scrollView
-    self.numberOfCell = [self.dataSource hTableView:self numberOfColumnInSection:0];
+    self.numberOfCell = [self.dataSource numberOfColumnInHTableView:self];
     
     //Build cell map by recording the right bound of each cell
     _cellRightBoundArray = malloc( sizeof(CGFloat) * self.numberOfCell );
     for (int i=0; i<self.numberOfCell; i++){
         //Get cell width at index i
         CGFloat cellWidth = DEFAULT_CELL_WIDTH;
-        if ([self.delegate respondsToSelector:@selector(hTableView:widthForColumnAtIndexPath:)]) {
-            cellWidth = [self.delegate hTableView:self widthForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+        if ([self.delegate respondsToSelector:@selector(hTableView:widthForColumnAtIndex:)]) {
+            cellWidth = [self.delegate hTableView:self widthForColumnAtIndex:i];
         }
         
         //Record right bound of each cell
@@ -101,7 +100,7 @@ typedef struct {
     contentSize.width = _cellRightBoundArray[self.numberOfCell-1]>CGRectGetWidth(self.bounds) ? _cellRightBoundArray[self.numberOfCell-1] : CGRectGetWidth(self.bounds)+1;
     self.contentSize = contentSize;
     
-    [self initVisibleCells];
+    [self initvisibleCellArray];
     
     self.isLoaded = YES;
 }
@@ -114,8 +113,35 @@ typedef struct {
     return nil;
 }
 
+-(NSArray *)visibleCells{
+    return [NSArray arrayWithArray:self.visibleCellArray];
+}
+
+-(HTableViewCell *)cellForColumnAtIndex:(NSInteger)index{
+    if ( index >= self.visibleCellRange.firstIndex && index <= self.visibleCellRange.lastIndex ) {
+        return self.visibleCellArray[ index - self.visibleCellRange.firstIndex ];
+    }else{
+        return nil;
+    }
+}
+
+-(NSInteger)indexForCell:(HTableViewCell *)cell{
+    if ([self.visibleCellArray containsObject:cell]) {
+        return self.visibleCellRange.firstIndex + [self.visibleCellArray indexOfObject:cell];
+    }else{
+        return NSNotFound;//Error
+    }
+}
+
+//Todo
+//
+-(void)reloadColumnsAtIndexSet:(NSIndexSet *)indexSet{
+    
+}
+//
+
 #pragma mark - Recyle and reuse cell in scroll
--(void)initVisibleCells{
+-(void)initvisibleCellArray{
     //构造一个change
     NSDictionary* change = @{@"old": [NSValue valueWithCGPoint:CGPointMake(0., 0.)]};
     
@@ -124,11 +150,11 @@ typedef struct {
     
     //Add cells in visible range
     for (int i=visibleRange.firstIndex; i<=visibleRange.lastIndex; i++) {
-        HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
+        HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndex:i];
         
-        cell.frame = [self frameForCellAtIndex:i];
+        [self prepareForAddingCell:cell atIndex:i];
         
-        [self.visibleCells addObject:cell];
+        [self.visibleCellArray addObject:cell];
         
         [self addSubview:cell];
     }
@@ -138,7 +164,6 @@ typedef struct {
 
 -(void)layoutCellsWithContentOffsetChange:(NSDictionary*)change{
     CellIndexRange newVisibleRange = [self visibleCellRangeWithOffsetChange:change];
-    NSLog(@"%d %d", newVisibleRange.firstIndex, newVisibleRange.lastIndex);
     
     //Heads up! ：在回收和添加cell的时候要注意一个极端情况，当翻动特别快的时候，可能会出现
     //1、向后滑动，老的lastIndex比新的firstIndex还小
@@ -153,11 +178,11 @@ typedef struct {
         recycleRange.lastIndex = MIN(newVisibleRange.firstIndex-1, self.visibleCellRange.lastIndex);
         
         for (int i=recycleRange.firstIndex; i<=recycleRange.lastIndex; i++){
-            HTableViewCell* cellToRecycle = self.visibleCells[0];
+            HTableViewCell* cellToRecycle = self.visibleCellArray[0];
             
             [self recycleCell:cellToRecycle];
 
-            [self.visibleCells removeObject:cellToRecycle];
+            [self.visibleCellArray removeObject:cellToRecycle];
                         
             [cellToRecycle removeFromSuperview];
         }
@@ -170,11 +195,11 @@ typedef struct {
         recycleRange.lastIndex = self.visibleCellRange.lastIndex;
         
         for (int i=recycleRange.firstIndex; i<=recycleRange.lastIndex; i++) {
-            HTableViewCell* cell = self.visibleCells.lastObject;
+            HTableViewCell* cell = self.visibleCellArray.lastObject;
             
             [self recycleCell:cell];
             
-            [self.visibleCells removeObject:cell];
+            [self.visibleCellArray removeObject:cell];
             
             [cell removeFromSuperview];
         }
@@ -188,11 +213,11 @@ typedef struct {
         addRange.lastIndex = MIN(self.visibleCellRange.firstIndex-1, newVisibleRange.lastIndex);
         
         for (int i=addRange.lastIndex; i>=addRange.firstIndex; i--) {
-            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
-                        
-            cell.frame = [self frameForCellAtIndex:i];
+            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndex:i];
             
-            [self.visibleCells insertObject:cell atIndex:0];
+            [self prepareForAddingCell:cell atIndex:i];
+            
+            [self.visibleCellArray insertObject:cell atIndex:0];
             
             [self addSubview:cell];
         }
@@ -205,11 +230,11 @@ typedef struct {
         addRange.lastIndex = newVisibleRange.lastIndex;
         
         for (int i=addRange.firstIndex; i<=addRange.lastIndex; i++) {
-            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
-
-            cell.frame = [self frameForCellAtIndex:i];
+            HTableViewCell* cell = [self.dataSource hTableView:self cellForColumnAtIndex:i];
             
-            [self.visibleCells addObject:cell];
+            [self prepareForAddingCell:cell atIndex:i];
+            
+            [self.visibleCellArray addObject:cell];
             
             [self addSubview:cell];
         }
@@ -219,11 +244,11 @@ typedef struct {
 }
 
 -(void)clearAllCells{
-    for (HTableViewCell* cell in self.visibleCells){
+    for (HTableViewCell* cell in self.visibleCellArray){
         [cell removeFromSuperview];
     }
     
-    [self.visibleCells removeAllObjects];
+    [self.visibleCellArray removeAllObjects];
     [self.cellRecyclePool removeAllObjects];
     free(_cellRightBoundArray);
     _cellRightBoundArray = NULL;
@@ -240,6 +265,10 @@ typedef struct {
     }
     
     [(WKMutableStack*)self.cellRecyclePool[cell.reuseIdentifier] push:cell];
+}
+
+-(void)prepareForAddingCell:(HTableViewCell*)cell atIndex:(NSInteger)index{
+    cell.frame = [self frameForCellAtIndex:index];
 }
 
 #pragma mark - Utils
@@ -332,6 +361,13 @@ typedef struct {
 //Get cell's center position x value
 -(CGFloat)xCenterOfCellAtIndex:(NSInteger)index{
     return _cellRightBoundArray[index] - [self widthOfCellAtIndex:index]/2;
+}
+
+#pragma mark - Cell selected event
+-(void)hTableViewCellDidSelected:(HTableViewCell*)cell{
+    if ([self.delegate respondsToSelector:@selector(hTableView:didSelectColumnAtIndex:)]) {
+        [self.delegate hTableView:self didSelectColumnAtIndex:[self indexForCell:cell]];
+    }
 }
 
 #pragma mark - Listen KVO scrollEvent

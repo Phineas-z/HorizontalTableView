@@ -8,7 +8,7 @@
 
 #import "ViewController.h"
 #import "HorizontalTableView.h"
-#import <QuartzCore/QuartzCore.h>
+#import "LabelCell.h"
 
 @interface ViewController ()<HorizontalTableViewDataSource, HorizontalTableViewDelegate, UIScrollViewDelegate>
 @property (nonatomic) NSInteger count;
@@ -24,33 +24,37 @@
     tableView.dataSource = self;
     tableView.delegate = self;
     tableView.backgroundColor = [UIColor redColor];
+    tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     
     [tableView reloadData];
     
     [self.view addSubview:tableView];
 }
 
--(NSInteger)hTableView:(HorizontalTableView *)tableView numberOfColumnInSection:(NSInteger)section{
+-(NSInteger)numberOfColumnInHTableView:(HorizontalTableView *)tableView{
     return 1000;
 }
 
--(HTableViewCell *)hTableView:(HorizontalTableView *)tableView cellForColumnAtIndexPath:(NSIndexPath *)indexPath{
+-(HTableViewCell *)hTableView:(HorizontalTableView *)tableView cellForColumnAtIndex:(NSInteger)index{
     //NSLog(@"call dequeue %d", indexPath.row);
-    HTableViewCell* cell = [tableView dequeueReusableCellWithIdentifier:@"hehe"];
+    LabelCell* cell = [tableView dequeueReusableCellWithIdentifier:@"hehe"];
     if (!cell) {
-        cell = [[[HTableViewCell alloc] initWithReuseIdentifier:@"hehe"] autorelease];
+        cell = [[[LabelCell alloc] initWithReuseIdentifier:@"hehe"] autorelease];
         self.count++;
         NSLog(@"alloc cell %d", self.count);
     }
-    cell.backgroundColor = [UIColor blueColor];
-    cell.layer.borderColor = [UIColor whiteColor].CGColor;
-    cell.layer.borderWidth = 1.;
+    
+    cell.label.text = [NSString stringWithFormat:@"%d", index];
     
     return cell;
 }
 
--(CGFloat)hTableView:(HorizontalTableView *)tableView widthForColumnAtIndexPath:(NSIndexPath *)indexPath{
+-(CGFloat)hTableView:(HorizontalTableView *)tableView widthForColumnAtIndex:(NSInteger)index{
     return 100;
+}
+
+-(void)hTableView:(HorizontalTableView *)tableView didSelectColumnAtIndex:(NSInteger)index{
+    NSLog(@"%d", index);
 }
 
 @end

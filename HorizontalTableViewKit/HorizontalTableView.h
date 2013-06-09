@@ -15,14 +15,24 @@
 @property (nonatomic, assign) id<HorizontalTableViewDataSource> dataSource;
 @property (nonatomic, assign) id<HorizontalTableViewDelegate> delegate;
 
+@property (nonatomic, readonly) NSArray* visibleCells;
+
 -(void)reloadData;
+
+//Not implemented
+//-(void)reloadColumnsAtIndexSet:(NSIndexSet *)indexSet;
+
 -(id)dequeueReusableCellWithIdentifier:(NSString *)identifier;
+
+-(HTableViewCell*)cellForColumnAtIndex:(NSInteger)index;// returns nil if cell is not visible
+
+-(NSInteger)indexForCell:(HTableViewCell *)cell;// returns nil if cell is not visible
 
 @end
 
 @protocol HorizontalTableViewDataSource <NSObject>
-- (NSInteger)hTableView:(HorizontalTableView *)tableView numberOfColumnInSection:(NSInteger)section;
-- (HTableViewCell *)hTableView:(HorizontalTableView *)tableView cellForColumnAtIndexPath:(NSIndexPath *)indexPath;
+- (NSInteger)numberOfColumnInHTableView:(HorizontalTableView *)tableView;
+- (HTableViewCell*)hTableView:(HorizontalTableView *)tableView cellForColumnAtIndex:(NSInteger)index;
 @optional
 //Not implemented yet
 //- (NSInteger)numberOfSectionsInHTableView:(UITableView *)tableView;
@@ -30,8 +40,8 @@
 
 @protocol HorizontalTableViewDelegate <NSObject, UIScrollViewDelegate>
 @optional
-- (void)hTableView:(HorizontalTableView *)tableView didSelectColumnAtIndexPath:(NSIndexPath *)indexPath;
-- (CGFloat)hTableView:(HorizontalTableView *)tableView widthForColumnAtIndexPath:(NSIndexPath *)indexPath;
+- (void)hTableView:(HorizontalTableView *)tableView didSelectColumnAtIndex:(NSInteger)index;
+- (CGFloat)hTableView:(HorizontalTableView *)tableView widthForColumnAtIndex:(NSInteger)index;
 //Not implemented yet
 //- (CGFloat)hTableView:(HorizontalTableView *)tableView heightForHeaderInSection:(NSInteger)section;
 //- (CGFloat)hTableView:(HorizontalTableView *)tableView heightForFooterInSection:(NSInteger)section;
